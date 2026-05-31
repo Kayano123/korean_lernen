@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>韓語單字記憶助手 (第5-7課)</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f7fa;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h1 { color: var(--primary-color); }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        select, button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.8; }
+
+        /* 字卡樣式 */
+        .card-area {
+            perspective: 1000px;
+            margin-bottom: 30px;
+        }
+
+        .flashcard {
+            width: 100%;
+            height: 250px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+        }
+
+        .flashcard.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: #e3f2fd;
+        }
+
+        .kr-text { font-size: 32px; font-weight: bold; margin-bottom: 10px; }
+        .cn-text { font-size: 24px; color: #555; }
+        .lesson-tag {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 12px;
+            background: #eee;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .progress { margin-top: 10px; font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🇰🇷 韓語單字卡</h1>
+    
+    <div class="controls">
+        <select id="lessonFilter">
+            <option value="all">所有課程 (5-7)</option>
+            <option value="5">第 5 課：問路</option>
+            <option value="6">第 6 課：問候與近況</option>
+            <option value="7">第 7 課：外貌與服裝</option>
+        </select>
+        <button onclick="shuffleCards()">隨機打亂</button>
+    </div>
+
+    <div class="card-area">
+        <div class="flashcard" id="card" onclick="this.classList.toggle('is-flipped')">
+            <div class="card-face card-front">
+                <span class="lesson-tag" id="tagFront">Lesson</span>
+                <div class="kr-text" id="krDisplay">加載中...</div>
+                <div style="color: #999; font-size: 12px;">(點擊翻面)</div>
+            </div>
+            <div class="card-face card-back">
+                <span class="lesson-tag" id="tagBack">Lesson</span>
+                <div class="cn-text" id="cnDisplay">加載中...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-buttons">
+        <button onclick="prevCard()" style="background:#666">上一個</button>
+        <div class="progress" id="progressText">0 / 0</div>
+        <button onclick="nextCard()">下一個</button>
+    </div>
+</div>
+
+<script>
+    // 單字數據庫
+    const vocabData = [
+        // 第 5 課
+        { kr: "쭉 가다", cn: "直走", lesson: 5 },
+        { kr: "우회전하다", cn: "右轉", lesson: 5 },
+        { kr: "횡단보도", cn: "斑馬線", lesson: 5 },
+        { kr: "사거리", cn: "十字路口", lesson: 5 },
+        { kr: "건너다", cn: "過、跨越", lesson: 5 },
+        { kr: "들어가다", cn: "進去", lesson: 5 },
+        { kr: "골목", cn: "巷子", lesson: 5 },
+        { kr: "올라가다", cn: "上去", lesson: 5 },
+        { kr: "내려가다", cn: "下去", lesson: 5 },
+        { kr: "자동판매기", cn: "自動販賣機", lesson: 5 },
+        { kr: "휴게실", cn: "休息室", lesson: 5 },
+        { kr: "공중전화", cn: "公共電話", lesson: 5 },
+        { kr: "요금", cn: "費用(料金)", lesson: 5 },
+        { kr: "개장 시간", cn: "開放時間/營業時間", lesson: 5 },
+        { kr: "조용하다", cn: "安靜的", lesson: 5 },
+        
+        // 第 6 課
+        { kr: "오랜만이다", cn: "好久不見", lesson: 6 },
+        { kr: "잘 지내다", cn: "過得很好", lesson: 6 },
+        { kr: "취직하다", cn: "就職、上班", lesson: 6 },
+        { kr: "학원에 다니다", cn: "上補習班", lesson: 6 },
+        { kr: "외국어를 배우다", cn: "學外語", lesson: 6 },
+        { kr: "유학을 가다", cn: "去留學", lesson: 6 },
+        { kr: "졸업하다", cn: "畢業", lesson: 6 },
+        { kr: "취직 준비를 하다", cn: "準備就業", lesson: 6 },
+        { kr: "체험하다", cn: "體驗", lesson: 6 },
+        { kr: "봉사 활동", cn: "志工服務", lesson: 6 },
+        { kr: "정신이 없다", cn: "忙得不可開交", lesson: 6 },
+        { kr: "병원", cn: "醫院", lesson: 6 },
+        { kr: "아르바이트", cn: "打工", lesson: 6 },
+        { kr: "한옥", cn: "韓屋", lesson: 6 },
+        { kr: "이사하다", cn: "搬家", lesson: 6 },
+        { kr: "일을 구하다", cn: "求職", lesson: 6 },
+        { kr: "얼굴", cn: "臉", lesson: 6 },
+        { kr: "볼일", cn: "要做的事", lesson: 6 },
+        { kr: "졸업식", cn: "畢業典禮", lesson: 6 },
+        { kr: "결혼식", cn: "結婚典禮", lesson: 6 },
+
+        // 第 7 課{ kr: "체격이 크다", cn: "體型高大", lesson: 7 },
+    { kr: "체격이 작다", cn: "體型嬌小", lesson: 7 },
+    { kr: "어깨가 넓다", cn: "肩膀寬", lesson: 7 },
+    { kr: "어깨가 좁다", cn: "肩膀窄", lesson: 7 },
+    { kr: "키가 크다", cn: "個子高", lesson: 7 },
+    { kr: "키가 작다", cn: "個子矮", lesson: 7 },
+    { kr: "마르다", cn: "消瘦", lesson: 7 },
+    { kr: "날씬하다", cn: "苗條的", lesson: 7 },
+    { kr: "뚱뚱하다", cn: "胖的", lesson: 7 },
+    { kr: "다리가 길다", cn: "腿長", lesson: 7 },
+    { kr: "다리가 짧다", cn: "腿短", lesson: 7 },
+    { kr: "배가 나오다", cn: "肚子凸出", lesson: 7 },
+    { kr: "얼굴이 동그랗다", cn: "臉型圓", lesson: 7 },
+    { kr: "얼굴이 네모나다", cn: "臉型方", lesson: 7 },
+    { kr: "코가 높다", cn: "鼻子高", lesson: 7 },
+    { kr: "코가 낮다", cn: "鼻子塌", lesson: 7 },
+    { kr: "눈이 크다", cn: "眼睛大", lesson: 7 },
+    { kr: "눈이 작다", cn: "眼睛小", lesson: 7 },
+    { kr: "얼굴이 잘생기다", cn: "臉蛋好看", lesson: 7 },
+    { kr: "얼굴이 못생기다", cn: "臉蛋不好看", lesson: 7 },
+    { kr: "옷을 입다", cn: "穿衣服", lesson: 7 },
+    { kr: "옷을 벗다", cn: "脫衣服", lesson: 7 },
+    { kr: "신발을 신다", cn: "穿鞋子", lesson: 7 },
+    { kr: "신발을 벗다", cn: "脫鞋子", lesson: 7 },
+    { kr: "모자를 쓰다", cn: "戴帽子", lesson: 7 },
+    { kr: "모자를 벗다", cn: "脫帽子", lesson: 7 },
+    { kr: "안경을 쓰다", cn: "戴眼鏡", lesson: 7 },
+    { kr: "안경을 벗다", cn: "摘下眼鏡", lesson: 7 },
+    { kr: "넥타이를 매다", cn: "繫領帶", lesson: 7 },
+    { kr: "넥타이를 풀다", cn: "解開領帶", lesson: 7 },
+    { kr: "시계를 차다", cn: "戴手錶", lesson: 7 },
+    { kr: "시계를 풀다", cn: "解開手錶", lesson: 7 },
+    { kr: "장갑을 끼다", cn: "戴手套", lesson: 7 },
+    { kr: "장갑을 빼다", cn: "脫手套", lesson: 7 },
+    { kr: "목도리를 하다", cn: "戴圍巾", lesson: 7 },
+    { kr: "목도리를 풀다", cn: "解開圍巾", lesson: 7 },
+
+    // B. 課文與活動新字彙 (새 어휘)
+    { kr: "닮다", cn: "像（遺傳或長相相似）", lesson: 7 },
+    { kr: "체격", cn: "體型、體格", lesson: 7 },
+    { kr: "면접", cn: "面試", lesson: 7 },
+    { kr: "최선을 다하다", cn: "全力、全力以赴", lesson: 7 },
+    { kr: "기다리고 기다리던", cn: "期待已久的、等了又等的", lesson: 7 },
+    { kr: "미팅", cn: "聯誼", lesson: 7 },
+    { kr: "이상형", cn: "理想型", lesson: 7 },
+    { kr: "첫눈에 반하다", cn: "一見鍾情", lesson: 7 },
+    { kr: "짝", cn: "對、雙、搭檔", lesson: 7 },
+    { kr: "말을 걸다", cn: "搭話、攀談", lesson: 7 },
+    { kr: "으악", cn: "啊！", lesson: 7 },
+    { kr: "첫 번째", cn: "第一次", lesson: 7 },
+    { kr: "보름달", cn: "滿月", lesson: 7 },
+    { kr: "젓가락", cn: "筷子", lesson: 7 },
+    { kr: "단춧구멍", cn: "扣眼", lesson: 7 },
+    { kr: "운동화", cn: "運動鞋", lesson: 7 },
+    { kr: "구두", cn: "皮鞋", lesson: 7 },
+    { kr: "부츠", cn: "靴子", lesson: 7 },
+    { kr: "가방을 메다", cn: "背背包", lesson: 7 },
+    { kr: "가방을 들다", cn: "提包包", lesson: 7 },
+    { kr: "회색", cn: "灰色", lesson: 7 },
+    { kr: "분홍색", cn: "粉紅色", lesson: 7 },
+    { kr: "노란색", cn: "黃色", lesson: 7 },
+    { kr: "파란색", cn: "藍色", lesson: 7 },
+    { kr: "빨간색", cn: "紅色", lesson: 7 },
+    { kr: "까만색", cn: "黑色", lesson: 7 },
+    { kr: "흰색", cn: "白色", lesson: 7 },
+    { kr: "갈색", cn: "棕色", lesson: 7 },
+    { kr: "초록색", cn: "綠色", lesson: 7 },
+    { kr: "평소", cn: "平常", lesson: 7 },
+    { kr: "형제", cn: "兄弟", lesson: 7 },
+    { kr: "얼굴형", cn: "臉型", lesson: 7 },
+    { kr: "살이 찌다", cn: "長胖、發福", lesson: 7 },
+    { kr: "보호하다", cn: "保護", lesson: 7 },
+    { kr: "미아보호소", cn: "走失幼童保護中心", lesson: 7 },
+    { kr: "액세서리", cn: "飾品", lesson: 7 },
+    { kr: "세", cn: "歲（敬語）", lesson: 7 },
+    { kr: "머리카락", cn: "頭髮", lesson: 7 },
+    { kr: "멀리서", cn: "從遠處", lesson: 7 },
+    { kr: "알아보기", cn: "分辨、認出", lesson: 7 },
+    { kr: "실종", cn: "失蹤", lesson: 7 },
+    { kr: "당시", cn: "當時", lesson: 7 },
+    { kr: "적히다", cn: "被記下、被寫下", lesson: 7 },
+    { kr: "목걸이", cn: "項鍊", lesson: 7 },
+    { kr: "알아듣다", cn: "聽懂", lesson: 7 },
+    { kr: "후사하다", cn: "厚謝、重謝", lesson: 7 },
+    { kr: "천사", cn: "天使", lesson: 7 },
+    { kr: "호랑이", cn: "老虎", lesson: 7 },
+    { kr: "연예인", cn: "演藝人員", lesson: 7 },
+    { kr: "아이돌", cn: "偶像", lesson: 7 },
+    { kr: "졸다", cn: "打瞌睡", lesson: 7 },
+    { kr: "늘다", cn: "增加", lesson: 7 },
+    { kr: "줄다", cn: "減少", lesson: 7 },
+    { kr: "줄이다", cn: "使減少", lesson: 7 },
+    { kr: "가늘다", cn: "細的", lesson: 7 }
+    ];
+
+    let currentList = [...vocabData];
+    let currentIndex = 0;
+
+    const krDisplay = document.getElementById('krDisplay');
+    const cnDisplay = document.getElementById('cnDisplay');
+    const tagFront = document.getElementById('tagFront');
+    const tagBack = document.getElementById('tagBack');
+    const progressText = document.getElementById('progressText');
+    const lessonFilter = document.getElementById('lessonFilter');
+    const cardElement = document.getElementById('card');
+
+    function updateCard() {
+        if (currentList.length === 0) {
+            krDisplay.innerText = "沒有單字";
+            cnDisplay.innerText = "請更換篩選條件";
+            return;
+        }
+        cardElement.classList.remove('is-flipped');
+        setTimeout(() => {
+            const item = currentList[currentIndex];
+            krDisplay.innerText = item.kr;
+            cnDisplay.innerText = item.cn;
+            tagFront.innerText = `L${item.lesson}`;
+            tagBack.innerText = `L${item.lesson}`;
+            progressText.innerText = `${currentIndex + 1} / ${currentList.length}`;
+        }, 150);
+    }
+
+    function nextCard() {
+        if (currentIndex < currentList.length - 1) {
+            currentIndex++;
+            updateCard();
+        }
+    }
+
+    function prevCard() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateCard();
+        }
+    }
+
+    function shuffleCards() {
+        currentList.sort(() => Math.random() - 0.5);
+        currentIndex = 0;
+        updateCard();
+    }
+
+    lessonFilter.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'all') {
+            currentList = [...vocabData];
+        } else {
+            currentList = vocabData.filter(item => item.lesson == val);
+        }
+        currentIndex = 0;
+        updateCard();
+    });
+
+    // 初始化
+    updateCard();
+</script>
+
+</body>
+</html>
